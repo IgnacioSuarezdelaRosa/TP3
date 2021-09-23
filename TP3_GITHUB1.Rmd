@@ -1,0 +1,108 @@
+---
+title: "TP3_GITHUB"
+author: "Ignacio Suarez de la Rosa"
+date: "22/9/2021"
+output: html_document
+---
+
+
+*Comenzaré cargando las librerías:*
+
+```{r}
+library(tidyverse) 
+library(sf) 
+library(gganimate) 
+library(png) 
+library(transformr) 
+options(scipen = 999) 
+```
+
+*Ahora cargaré los datos utilizados en los tps anteriores y sumaré el shape de Comunas para graficar:*
+
+```{r}
+Comunas <- read_sf("comunas.shp")
+Comunas <-st_transform(Comunas,crs = 4326)
+Establecimientos_Educativos <- read_sf("establecimientos_educativos_WGS84.geojson") 
+Establecimientos_Educativos <-st_transform (Establecimientos_Educativos,crs = st_crs(Comunas))
+```
+
+*Me quedaré con los datos significativos:*
+
+```{r}
+Establecimientos_Educativos_Filtro <- Establecimientos_Educativos %>%
+  select(dom_establ, nombre_est, comuna, barrio, point_x, point_y, Nivel, geometry)%>%
+  mutate(COMUNAS=comuna)
+```
+
+```{r}
+Establecimientos_Educativos_Filtro <-st_transform(Establecimientos_Educativos_Filtro,crs = st_crs(Comunas))
+```
+
+*Veré la ubicación de los Establecimientos educativos en CABA, en sus respectivas Comunas*
+
+```{r}
+ggplot() +
+  geom_sf(data=Comunas, fill=NA) + 
+  geom_sf(data=Establecimientos_Educativos_Filtro) +
+  theme_void()+
+  labs(title="Establecimientos Educativos",
+       subtitle="Ciudad de Buenos Aires", caption= "Fuente: Ba Data")
+```
+
+*Ahora veré la cantidad de establecimientos educativos por Comuna*
+
+```{r}
+Establecimientos_Educativos_Q <- Establecimientos_Educativos_Filtro %>%
+  select(point_x, point_y, Nivel, COMUNAS, geometry) %>%
+  group_by(COMUNAS)%>%
+  summarise(Nivel=n())
+Establecimientos_Educativos_Q <- st_transform (Establecimientos_Educativos_Q, crs= st_crs(Comunas)) 
+Establecimientos_por_Comuna<- st_join(Establecimientos_Educativos_Q, Comunas) 
+```
+```{r}
+Establecimientos_por_Comuna_Filtro <- Establecimientos_por_Comuna %>%
+  mutate(COMUNA=COMUNAS.x)%>%
+  select(COMUNA, Nivel, BARRIOS, geometry)
+Establecimientos_por_Comuna_Filtro <- Establecimientos_por_Comuna_Filtro [-6,]
+```
+
+```{r}
+ggplot(Establecimientos_por_Comuna_Filtro) +
+ geom_col(aes(x = COMUNA, y=Nivel, fill=Nivel)) +
+ labs(title="'Establecimientos Educativos por Comuna'", subtitle ="fuente: Ba Data", x= "Comunas", y=  "Establecimientos Educativos") +
+theme_minimal() +
+scale_color_viridis_d(option = "magma")
+```
+*Las comunas 1, 4 y 8 son las que contienen la mayor cantidad de Establecimientos educativos en Caba*
+
+```{r}
+ggplot() +
+  geom_sf(data=Comunas, fill="gray", color="black")+
+  geom_sf(data=Establecimientos_por_Comuna, aes(color=Nivel), alpha=0.5, show.legend = TRUE) +
+  theme_void()+
+  labs(title="Establecimientos Educativos",
+       subtitle="Ciudad de Buenos Aires", caption= "Fuente: Ba Data")
+```
+
+```{r}
+str(Establecimientos_por_Comuna)
+```
+
+*Ahora veré cuales son las comunas más grandes en superficie y si tiene alguna similitud con la cantidad de Entidades Educativas*
+
+ggplot(Comunas)+
+  geom_sf(aes(fill=AREA), color="NA") + labs(title = "Superficie por Comuna", subtitle = "fuente: https://data.buenosaires.gob.ar/dataset/Comunas")
+
+```{r}
+ggplot(Comunas) +
+  geom_sf(data=Comunas, aes(fill=AREA), color="NA") + 
+  theme_void()+
+  labs(title="Superficies comunas",
+       subtitle="Ciudad de Buenos Aires", caption= "Fuente: Ba Data")
+```
+```{r}
+str(Comunas)
+```
+
+
+*Las comunas con mayor superficie son las comunas 4, 8, 1 9 y 14, con lo cual se puede encontrar alguna similitud en la superficie de la Comuna y la Cantidad de Establecimientos Educativos que posee.*
